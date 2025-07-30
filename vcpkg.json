@@ -1,0 +1,10 @@
+{
+  "name": "pattern-access",
+  "version": "1.0.0",
+  "dependencies": [
+    "nlohmann-json",
+    "cli11",
+    "numactl"
+  ],
+  "builtin-baseline": "507dfce6a1af013fd91861f2d65e4d7577cda4de"
+} 
