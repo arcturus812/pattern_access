@@ -18,6 +18,9 @@ add_executable(micro-access
     src/mem_access.cc
 )
 
+# Set compiler options for the target
+target_compile_options(micro-access PRIVATE -O0 -g -Wall)
+
 # Include directories
 target_include_directories(micro-access PRIVATE inc)
 
