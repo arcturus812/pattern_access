@@ -15,6 +15,7 @@ enum class AccessPattern {
     STRIDE = 2,
     PT_CHASE = 3,
     LINEAR = 4,
+    UNKNOWN = 99
 };
 
 // Memory access unit size (64 bytes - typical cache line size)
@@ -48,6 +49,10 @@ protected:
 
     // NUMA node
     int numa_node;
+
+    // index tables
+    bool intra;
+    std::vector<size_t> random_index_table;
     
     // Number of 64-byte access units
     size_t access_units;
@@ -83,3 +88,13 @@ public:
 };
 
 #endif // MEM_ACCESS_H
+
+// Random access implementation
+class RandomAccess : public MemAccess {
+public:
+    RandomAccess();
+    virtual ~RandomAccess();
+    
+    // Override access function for random pattern
+    virtual void access() override;
+};

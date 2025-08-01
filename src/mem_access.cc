@@ -12,7 +12,7 @@
 
 // MemAccess base class implementation
 MemAccess::MemAccess() : memory_buffer(nullptr), mem_size(0), numa_node(0),
-                         access_units(0), pattern(AccessPattern::SEQUENTIAL), 
+                         access_units(0), pattern(AccessPattern::UNKNOWN), 
                          iteration(1), access_stride(4), access_per_page(8), 
                          hesitate(false), initialized(false) {
     // Default constructor with no arguments required
@@ -93,6 +93,7 @@ void MemAccess::deallocate_numa_memory() {
 bool MemAccess::init(size_t memory_size, AccessPattern access_pattern, const json& config) {
     try {
         // Extract configuration values
+        intra = config.value("intra", true);
         iteration = config.value("iteration", 1);
         access_stride = config.value("access_stride", 4);
         access_per_page = config.value("access_per_page", 8);
@@ -112,9 +113,22 @@ bool MemAccess::init(size_t memory_size, AccessPattern access_pattern, const jso
         pattern = access_pattern;
         if(pattern == AccessPattern::RANDOM) {
             // TODO: Implement random index table
+            if(intra){
+                // TODO: Implement intra-page random index table (which is short table)
+                std::cout << "Intra-page random index table" << std::endl;
+                random_index_table.resize((256 * 1024 * 1024) / (PAGE_SIZE)); // 256MB LLC cache in development server
+                for(size_t i = 0; i < random_index_table.size(); i++) {
+                    random_index_table[i] = rand() % (PAGE_SIZE / 64);
+                }
+            }
+            /*
+            // TODO: Implement inter-page random index table (which is long table)
+            else{
+            }
+            */
         }
         if(pattern == AccessPattern::PT_CHASE) {
-            // TODO: Implement PT-chase index table
+            // TODO: Implement PT-chase chain
         }
         if(pattern == AccessPattern::LINEAR) {
             // TODO: Implement linear index table
@@ -132,6 +146,8 @@ bool MemAccess::init(size_t memory_size, AccessPattern access_pattern, const jso
 bool MemAccess::is_initialized() const {
     return initialized;
 }
+
+
 
 // SequentialAccess implementation
 SequentialAccess::SequentialAccess() : MemAccess() {
@@ -151,7 +167,7 @@ void SequentialAccess::access() {
     // Calculate number of uint64_t elements per page (4KB / 8 bytes = 512)
     const size_t uint64_per_page = PAGE_SIZE / sizeof(uint64_t);
     // PAGE_SIZE is kb, mem_size is byte
-    const size_t total_pages = mem_size / (PAGE_SIZE * 1024);
+    const size_t total_pages = mem_size / (PAGE_SIZE);
     volatile uint64_t dummy = 0; // Use volatile to prevent optimization
 
     uint64_t* ptr = static_cast<uint64_t*>(memory_buffer);
@@ -164,6 +180,44 @@ void SequentialAccess::access() {
         }
     }
     
+    // Prevent compiler from optimizing away the dummy variable
+    (void)dummy;
+}
+
+
+RandomAccess::RandomAccess() : MemAccess() {
+    // Constructor inherits from base class
+}
+
+RandomAccess::~RandomAccess() {
+    // Destructor
+}
+
+void RandomAccess::access() {
+    // Check if initialization is complete before access
+    if (!is_initialized()) {
+        throw std::runtime_error("RandomAccess not initialized. Call init() first.");
+    }
+
+    volatile uint64_t dummy = 0; // Use volatile to prevent optimization
+    const size_t total_pages = mem_size / PAGE_SIZE;
+    const size_t uint64_per_page = PAGE_SIZE / sizeof(uint64_t);
+
+    uint64_t* ptr = static_cast<uint64_t*>(memory_buffer);
+
+    for (int iter = 0; iter < iteration; iter++) {
+        for (size_t i = 0; i < total_pages; i++) {
+            for (size_t j = 0; j < static_cast<size_t>(access_per_page); j++) {
+                // Use random index table to access memory randomly
+                size_t random_offset = random_index_table[i % random_index_table.size()];
+                // Ensure we don't access beyond the page boundary
+                if (random_offset < uint64_per_page) {
+                    dummy = ptr[i * uint64_per_page + random_offset];
+                }
+            }
+        }
+    }
+
     // Prevent compiler from optimizing away the dummy variable
     (void)dummy;
 }

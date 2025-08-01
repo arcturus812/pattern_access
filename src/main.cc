@@ -51,6 +51,11 @@ int main(int argc, char *argv[]) {
         if (verbose) {
             std::cout << "Configured sequential access pattern" << std::endl;
         }
+    }else if(access_pattern == "random") {
+        mem_accessor.reset(new RandomAccess());
+        if (verbose) {
+            std::cout << "Configured random access pattern" << std::endl;
+        }
     } else {
         std::cerr << "Invalid access pattern: " << access_pattern << std::endl;
         return 1;
@@ -60,7 +65,7 @@ int main(int argc, char *argv[]) {
     std::string mem_size_str = config.value("mem_size", std::string("1G"));
     size_t mem_size_byte = parse_size_to_bytes(mem_size_str);
     
-    if (mem_accessor && mem_accessor->init(mem_size_byte, AccessPattern::SEQUENTIAL, config)) {
+    if (mem_accessor && mem_accessor->init(mem_size_byte, config, config)) {
         if (verbose) {
             std::cout << "Memory access initialized successfully(size: " << mem_size_str << "(" << mem_size_byte << " bytes))" << std::endl;
         }
