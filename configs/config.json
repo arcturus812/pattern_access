@@ -1,9 +1,9 @@
 {
-  "mem_size": "32G",
-  "iteration": 4,
+  "mem_size": "16G",
+  "iteration": 100,
   "access_pattern": "sequential",
   "access_stride": 4,
   "access_per_page": 16,
-  "numa_node": 2,
+  "numa_node": 0,
   "hesitate": true
 }

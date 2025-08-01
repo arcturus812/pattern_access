@@ -11,8 +11,10 @@ using json = nlohmann::json;
 enum class AccessPattern {
     SEQUENTIAL = 0,
     // Future patterns can be added here
-    // RANDOM = 1,
-    // STRIDE = 2,
+    RANDOM = 1,
+    STRIDE = 2,
+    PT_CHASE = 3,
+    LINEAR = 4,
 };
 
 // Memory access unit size (64 bytes - typical cache line size)
@@ -36,8 +38,6 @@ public:
     // Check if initialization is complete
     bool is_initialized() const;
     
-    // Get memory size in access units (64-byte blocks)
-    size_t get_access_units() const;
 
 protected:
     // Memory buffer (NUMA-aware allocation)

@@ -11,10 +11,10 @@
 #endif
 
 // MemAccess base class implementation
-MemAccess::MemAccess() : memory_buffer(nullptr), mem_size(0), access_units(0), 
-                         pattern(AccessPattern::SEQUENTIAL), iteration(1), 
-                         access_stride(4), access_per_page(8), hesitate(false), numa_node(0),
-                         initialized(false) {
+MemAccess::MemAccess() : memory_buffer(nullptr), mem_size(0), numa_node(0),
+                         access_units(0), pattern(AccessPattern::SEQUENTIAL), 
+                         iteration(1), access_stride(4), access_per_page(8), 
+                         hesitate(false), initialized(false) {
     // Default constructor with no arguments required
 }
 
@@ -110,6 +110,15 @@ bool MemAccess::init(size_t memory_size, AccessPattern access_pattern, const jso
         mem_size = aligned_size;
         access_units = aligned_size / ACCESS_UNIT_SIZE;
         pattern = access_pattern;
+        if(pattern == AccessPattern::RANDOM) {
+            // TODO: Implement random index table
+        }
+        if(pattern == AccessPattern::PT_CHASE) {
+            // TODO: Implement PT-chase index table
+        }
+        if(pattern == AccessPattern::LINEAR) {
+            // TODO: Implement linear index table
+        }
         initialized = true;
         
         return true;
@@ -122,10 +131,6 @@ bool MemAccess::init(size_t memory_size, AccessPattern access_pattern, const jso
 
 bool MemAccess::is_initialized() const {
     return initialized;
-}
-
-size_t MemAccess::get_access_units() const {
-    return access_units;
 }
 
 // SequentialAccess implementation
@@ -145,39 +150,20 @@ void SequentialAccess::access() {
 
     // Calculate number of uint64_t elements per page (4KB / 8 bytes = 512)
     const size_t uint64_per_page = PAGE_SIZE / sizeof(uint64_t);
-    const size_t total_uint64_elements = mem_size / sizeof(uint64_t);
-    const size_t total_pages = mem_size / PAGE_SIZE;
-    
-    // Repeat for specified iterations
-    for (int iter = 0; iter < iteration; ++iter) {
-        // Process each page
-        for (size_t page = 0; page < total_pages; ++page) {
-            // Calculate starting position for this page
-            size_t page_start_uint64 = page * uint64_per_page;
-            
-            // Access specified number of uint64_t elements per page
-            for (int access_count = 0; access_count < access_per_page; ++access_count) {
-                // Calculate position within the page using stride
-                size_t position_in_page = (access_count * access_stride) % uint64_per_page;
-                size_t absolute_position = page_start_uint64 + position_in_page;
-                
-                // Ensure we don't exceed memory bounds
-                if (absolute_position >= total_uint64_elements) {
-                    break;
-                }
-                
-                // Get pointer to uint64_t element
-                uint64_t* access_ptr = static_cast<uint64_t*>(memory_buffer) + absolute_position;
-                
-                // Perform 64-bit (uint64_t) access
-                volatile uint64_t dummy = *access_ptr;  // Read 8 bytes
-                *access_ptr = dummy + 1;                // Write 8 bytes (increment)
-                
-                // Handle hesitate option if needed
-                if (hesitate) {
-                    // TODO: Add delay or hesitation logic
-                }
+    // PAGE_SIZE is kb, mem_size is byte
+    const size_t total_pages = mem_size / (PAGE_SIZE * 1024);
+    volatile uint64_t dummy = 0; // Use volatile to prevent optimization
+
+    uint64_t* ptr = static_cast<uint64_t*>(memory_buffer);
+
+    for (int iter = 0; iter < iteration; iter++) {
+        for (size_t i = 0; i < total_pages; i++) {
+            for (size_t j = 0; j < static_cast<size_t>(access_per_page); j++) {
+                dummy = ptr[i * uint64_per_page + j];
             }
         }
     }
+    
+    // Prevent compiler from optimizing away the dummy variable
+    (void)dummy;
 }
