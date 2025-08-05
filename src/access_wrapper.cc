@@ -1,6 +1,7 @@
 #include "access_wrapper.h"
 #include "sequential_access.h"
 #include "stride_access.h"
+#include "dynamic_random_access.h"
 #include <iostream>
 #include <memory>
 
@@ -14,9 +15,11 @@ AccessWrapper::~AccessWrapper() {
 
 std::unique_ptr<MemoryAccessBase> AccessWrapper::create_access_pattern(const std::string& pattern) {
     if (pattern == "sequential") {
-        return std::make_unique<SequentialAccess>();
+        return std::unique_ptr<MemoryAccessBase>(new SequentialAccess());
     } else if (pattern == "stride") {
-        return std::make_unique<StrideAccess>();
+        return std::unique_ptr<MemoryAccessBase>(new StrideAccess());
+    } else if (pattern == "dynamic_random") {
+        return std::unique_ptr<MemoryAccessBase>(new DynamicRandomAccess());
     } else {
         std::cerr << "Unknown access pattern: " << pattern << std::endl;
         return nullptr;
