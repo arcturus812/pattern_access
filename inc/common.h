@@ -6,7 +6,13 @@
 #include <sstream>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 
+// Include NUMA headers only if available
+#ifdef HAVE_NUMA
+#include <numa.h>
+#include <numaif.h>
+#endif
 
 uint64_t parse_size_to_bytes(const std::string& input) {
     std::string trimmed;
@@ -43,4 +49,72 @@ uint64_t parse_size_to_bytes(const std::string& input) {
     }
 
     return static_cast<uint64_t>(std::round(value * it->second));
+}
+
+// Memory allocation function
+void* allocate_numa_memory(size_t size, int node) {
+    void* memory_buffer = nullptr;
+    
+#ifdef HAVE_NUMA
+    // Check if NUMA is available
+    if (numa_available() < 0) {
+        std::cerr << "NUMA not available, using regular malloc" << std::endl;
+        memory_buffer = malloc(size);
+        if (memory_buffer) {
+            memset(memory_buffer, 0, size);
+        }
+        return memory_buffer;
+    }
+    
+    // Check if the requested NUMA node is valid
+    int max_node = numa_max_node();
+    if (node < 0 || node > max_node) {
+        std::cerr << "Invalid NUMA node " << node << ", using node 0" << std::endl;
+        node = 0;
+    }
+    
+    // Allocate memory on specific NUMA node
+    memory_buffer = numa_alloc_onnode(size, node);
+    if (!memory_buffer) {
+        std::cerr << "Failed to allocate memory on NUMA node " << node << std::endl;
+        return nullptr;
+    }
+    
+    // Initialize memory
+    memset(memory_buffer, 0, size);
+    
+    // Verify memory is allocated on correct NUMA node (optional)
+    int allocated_node = -1;
+    if (get_mempolicy(&allocated_node, nullptr, 0, memory_buffer, MPOL_F_NODE | MPOL_F_ADDR) == 0) {
+        if (allocated_node != node) {
+            std::cerr << "Warning: Memory allocated on node " << allocated_node 
+                      << " instead of requested node " << node << std::endl;
+        }
+    }
+    
+#else
+    // NUMA not available, use regular malloc
+    std::cerr << "NUMA support not compiled in, using regular malloc" << std::endl;
+    memory_buffer = malloc(size);
+    if (memory_buffer) {
+        memset(memory_buffer, 0, size);
+    }
+#endif
+    
+    return memory_buffer;
+}
+
+// Memory deallocation function
+void deallocate_numa_memory(void* memory_buffer, size_t size) {
+    if (memory_buffer) {
+#ifdef HAVE_NUMA
+        if (numa_available() >= 0) {
+            numa_free(memory_buffer, size);
+        } else {
+            free(memory_buffer);
+        }
+#else
+        free(memory_buffer);
+#endif
+    }
 }

@@ -3,11 +3,10 @@
 #include <nlohmann/json.hpp>
 #include <CLI/CLI.hpp>
 #include <fstream>
-#include <memory>
 #include <chrono>
-#include <unistd.h>
-#include "mem_access.h"
+
 #include "common.h"
+#include "access_wrapper.h"
 
 using json = nlohmann::json;
 
@@ -41,61 +40,61 @@ int main(int argc, char *argv[]) {
         std::cout << "Loaded config from: " << config_input << std::endl;
         std::cout << "Config: " << config.dump(2) << std::endl;
     }
-    
-    // Create memory access object based on pattern
-    std::unique_ptr<MemAccess> mem_accessor;
-    
-    std::string access_pattern = config.value("access_pattern", std::string("sequential"));
-    if (access_pattern == "sequential") {
-        mem_accessor.reset(new SequentialAccess());
-        if (verbose) {
-            std::cout << "Configured sequential access pattern" << std::endl;
-        }
-    }else if(access_pattern == "random") {
-        mem_accessor.reset(new RandomAccess());
-        if (verbose) {
-            std::cout << "Configured random access pattern" << std::endl;
-        }
-    } else {
-        std::cerr << "Invalid access pattern: " << access_pattern << std::endl;
-        return 1;
-    }
-    
-    // Initialize memory access with config
+
+    // Alloc and init memory according to config's mem_size, numa_node
     std::string mem_size_str = config.value("mem_size", std::string("1G"));
+    int numa_node = config.value("numa_node", 0);
+    
     size_t mem_size_byte = parse_size_to_bytes(mem_size_str);
     
-    if (mem_accessor && mem_accessor->init(mem_size_byte, config, config)) {
-        if (verbose) {
-            std::cout << "Memory access initialized successfully(size: " << mem_size_str << "(" << mem_size_byte << " bytes))" << std::endl;
-        }
-        std::cout << "PID: " << getpid() << std::endl;
-
-        if (config.value("hesitate", false)) {
-            // pause by using input
-            std::cout << "Press Enter to continue..." << std::endl;
-            std::cin.get();
-        }
-        
-        // Measure access time
-        auto start_time = std::chrono::high_resolution_clock::now();
-        
-        // Perform memory access iterations
-        mem_accessor->access();
-        
-        auto end_time = std::chrono::high_resolution_clock::now();
-        
-        // Calculate elapsed time in microseconds
-        auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        
-        // Output timing results
-        std::cout << "Memory access completed:" << std::endl;
-        std::cout << "  Total time: " << elapsed_time.count() << " microseconds" << std::endl;
-        
-    } else {
-        std::cerr << "Failed to initialize memory access" << std::endl;
+    // Round up memory size to multiple of 64 bytes (cache line size)
+    const size_t ACCESS_UNIT_SIZE = 64;
+    size_t aligned_size = ((mem_size_byte + ACCESS_UNIT_SIZE - 1) / ACCESS_UNIT_SIZE) * ACCESS_UNIT_SIZE;
+    
+    void* memory_buffer = allocate_numa_memory(aligned_size, numa_node);
+    if (!memory_buffer) {
+        std::cerr << "Failed to allocate memory" << std::endl;
         return 1;
     }
     
+    if (verbose) {
+        std::cout << "Memory allocated successfully:" << std::endl;
+        std::cout << "  Size: " << mem_size_str << " (" << aligned_size << " bytes)" << std::endl;
+        std::cout << "  NUMA node: " << numa_node << std::endl;
+    }
+
+
+    // Create and initialize AccessWrapper with selected pattern and config
+    AccessWrapper access_wrapper;
+    std::string pattern = config.value("access_pattern", std::string("sequential"));
+    // add verbose to config element
+    config["verbose"] = verbose;
+    if (!access_wrapper.init(pattern, memory_buffer, aligned_size, config)) {
+        std::cerr << "Failed to initialize AccessWrapper" << std::endl;
+        deallocate_numa_memory(memory_buffer, aligned_size);
+        return 1;
+    }
+    
+    // if config's hesitate is true, wait for user input
+    if (config.value("hesitate", false)) {
+        std::cout << "initialized, press Enter to access memory by \033[31m" << pattern << "\033[0m pattern" << std::endl;
+        std::cin.get();
+    }
+
+    // Get the start timestamp (in milliseconds since epoch)
+    auto start_timestamp = std::chrono::steady_clock::now();
+
+    // run access wrapper
+    access_wrapper.access();
+
+    // Get the end timestamp (in milliseconds since epoch)
+    auto end_timestamp = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_timestamp - start_timestamp);
+    std::cout << "Time taken: " << duration.count() << " milliseconds" << std::endl; // TODO : print result
+    
+
+    // Clean up memory before exit
+    deallocate_numa_memory(memory_buffer, aligned_size);
+
     return 0;
 }

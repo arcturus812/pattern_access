@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(pattern_access VERSION 1.0.0 LANGUAGES CXX)
 
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 11)
+# Set C++ standard to C++14 for std::make_unique support
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find packages
@@ -15,7 +15,9 @@ find_package(CLI11 CONFIG REQUIRED)
 # Add executable with all source files
 add_executable(micro-access 
     src/main.cc
-    src/mem_access.cc
+    src/access_wrapper.cc
+    src/sequential_access.cc
+    src/stride_access.cc
 )
 
 # Set compiler options for the target

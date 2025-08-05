@@ -1,10 +1,10 @@
 {
-  "mem_size": "16G",
+  "mem_size": "8G",
   "iteration": 100,
-  "access_pattern": "random",
-  "access_stride": 4,
-  "access_per_page": 16,
-  "numa_node": 0,
+  "access_pattern": "sequential",
+  "access_stride": 1,
+  "byte_per_access": 8,
+  "numa_node": 2,
   "hesitate": true,
   "intra": true
 }
