@@ -35,12 +35,12 @@ void SequentialAccess::access() {
         return;
     }
 
-    // Access memory in byte_per_access units
-    size_t num_elements = memory_size_ / byte_per_access_;
-    for (size_t i = 0; i < num_elements; i++) {
-        dummy_variable = *get_ptr_at_offset<uint64_t>(i * byte_per_access_);
-        //auto* ptr = get_ptr_at_offset<uint64_t>(i * byte_per_access_);
-        //dummy_variable = *ptr;
+    for (int it = 0; it < iteration_; it++) {
+        // Access memory in byte_per_access units
+        size_t num_elements = memory_size_ / byte_per_access_;
+        for (size_t i = 0; i < num_elements; i++) {
+            dummy_variable = *get_ptr_at_offset<uint64_t>(i * byte_per_access_);
+        }
     }
     (void)dummy_variable;
 
