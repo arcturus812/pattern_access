@@ -1,10 +1,9 @@
 {
   "mem_size": "8G",
-  "iteration": 100,
+  "iteration": 1,
   "access_pattern": "sequential",
   "access_stride": 1,
-  "byte_per_access": 8,
+  "byte_per_access": 4,
   "numa_node": 2,
-  "hesitate": true,
   "intra": true
 }

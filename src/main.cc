@@ -16,12 +16,15 @@ int main(int argc, char *argv[]) {
     // Define options
     std::string config_input;
     bool verbose = false;
+    bool pause = false;
     
     // Add options to the app
     app.add_option("-c,--config", config_input, "config file path")
         ->required();
     
     app.add_flag("-v,--verbose", verbose, "Enable verbose output");
+
+    app.add_flag("-p, --pause", pause, "Pause before access");
     
     // Parse command line arguments
     CLI11_PARSE(app, argc, argv);
@@ -75,8 +78,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    // if config's hesitate is true, wait for user input
-    if (config.value("hesitate", false)) {
+    if (pause) {
         std::cout << "initialized, press Enter to access memory by \033[31m" << pattern << "\033[0m pattern" << std::endl;
         std::cin.get();
     }

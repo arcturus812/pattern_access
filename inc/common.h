@@ -14,6 +14,16 @@
 #include <numaif.h>
 #endif
 
+bool fill_random_value(void* memory_buffer, size_t size) {
+    uint64_t* buf64 = static_cast<uint64_t*>(memory_buffer);
+    size_t n64 = size / sizeof(uint64_t);
+    uint64_t seed = reinterpret_cast<uintptr_t>(memory_buffer) ^ size;
+    for (size_t i = 0; i < n64; ++i) {
+        buf64[i] = seed;
+    }
+    return seed;
+}
+
 uint64_t parse_size_to_bytes(const std::string& input) {
     std::string trimmed;
     for (char c : input) {
@@ -82,6 +92,7 @@ void* allocate_numa_memory(size_t size, int node) {
     
     // Initialize memory
     memset(memory_buffer, 0, size);
+
     
     // Verify memory is allocated on correct NUMA node (optional)
     int allocated_node = -1;
@@ -100,6 +111,11 @@ void* allocate_numa_memory(size_t size, int node) {
         memset(memory_buffer, 0, size);
     }
 #endif
+
+    if (!fill_random_value(memory_buffer, size)) {
+        std::cerr << "Failed to fill memory buffer with random value" << std::endl;
+        return nullptr;
+    }
     
     return memory_buffer;
 }

@@ -29,19 +29,20 @@ bool SequentialAccess::init(void* memory_buffer, size_t memory_size, const json&
 }
 
 void SequentialAccess::access() {
+    volatile uint64_t dummy_variable = 0;
     if (!initialized_) {
         std::cerr << "SequentialAccess not initialized" << std::endl;
         return;
     }
 
-    // TODO: Implement sequential access pattern
-
     // Access memory in byte_per_access units
     size_t num_elements = memory_size_ / byte_per_access_;
     for (size_t i = 0; i < num_elements; i++) {
-        auto* ptr = get_ptr_at_offset<uint64_t>(i * byte_per_access_);
-        *ptr = i;
+        dummy_variable = *get_ptr_at_offset<uint64_t>(i * byte_per_access_);
+        //auto* ptr = get_ptr_at_offset<uint64_t>(i * byte_per_access_);
+        //dummy_variable = *ptr;
     }
+    (void)dummy_variable;
 
     if (verbose_) {
         std::cout << "Sequential access pattern executed" << std::endl;

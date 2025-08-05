@@ -102,7 +102,7 @@ fi
 
 # 3. Run make
 print_status "Building project..."
-make
+make -j
 
 if [ $? -eq 0 ]; then
     print_success "Build completed successfully"
