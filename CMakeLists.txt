@@ -19,6 +19,7 @@ add_executable(micro-access
     src/sequential_access.cc
     src/stride_access.cc
     src/dynamic_random_access.cc
+    src/pointer_chase_access.cc
 )
 
 # Set compiler options for the target

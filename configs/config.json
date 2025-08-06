@@ -1,7 +1,7 @@
 {
   "mem_size": "8G",
   "iteration": 1,
-  "access_pattern": "dynamic_random",
+  "access_pattern": "pointer_chase",
   "access_stride": 2,
   "byte_per_access": 8,
   "numa_node": 2
